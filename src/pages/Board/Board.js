@@ -1,5 +1,6 @@
-import React, { useEffect,useState } from 'react';
+import React,{useEffect,useState} from 'react';
 import Lane from '../../components/Lane/Lane';
+import useDataFetching from '../../Hooks/useDataFetching';
 import "./Board.css";
 
 const lanes = [
@@ -7,29 +8,37 @@ const lanes = [
     {id:2, title: 'In Progress'},
     {id:3, title: 'Review'},
     {id:4, title: 'Done'},
-
 ]
-function Board(props) {
-    const [Loading,setLoading] = useState(false);
-    const [tasks,setTasks] = useState([]);
-    const [error,setError] = useState();
+
+function onDragStart(e, id){
+    e.dataTransfer.setData('id', id);
+    console.log(e.dataTransfer);
+}
+
+function onDragOver(e){
+    e.preventDefault();
+}
+
+function Board() {
+    
+    const[Loading,error,data] = useDataFetching('https://my-json-server.typicode.com/MataGitUniat/myAPI/tasks')
+    
+    const[tasks,setTasks] = useState([]);
 
     useEffect(() =>{
-        async function fetchData(){
-            try{
-                const tasks = await fetch('https://my-json-server.typicode.com/MataGitUniat/myAPI/tasks');
-                const result = await tasks.json();
-                if(result){
-                    setTasks(result);
-                    setLoading(false);
-                }
-            } catch(e){
-                setLoading(false);
-                setError(e.error);
+        setTasks(data);
+    },[data])
+
+    function onDrop(e,laneId){
+        const id = e.dataTransfer.getData('id');
+        const updatedTasks = tasks.map((task)=>{
+            if(task.id.toString() === id){
+                task.lane = laneId;
             }
-        }
-        fetchData();
-    },[]);
+            return task;
+        });
+        setTasks(updatedTasks);
+    }
 
     return (
         <div className ="Board-wrapper">
@@ -37,12 +46,14 @@ function Board(props) {
                 lanes.map((lane) =>(
                     <Lane 
                         key={lane.id}
+                        laneId = {lane.id}
                         title={lane.title}
                         Loading={Loading}
                         error={error}
                         tasks={tasks.filter((task)=>task.lane === lane.id)}
-                        
-
+                        onDragStart={onDragStart}
+                        onDragOver={onDragOver}
+                        onDrop={onDrop}
                     />
                 ))
             }
